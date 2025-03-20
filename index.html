@@ -9,6 +9,8 @@
         html, body {
             margin: 0;
             padding: 0;
+            overflow: hidden;
+            touch-action: none; /* Disable browser's default touch actions */
         }
         
         .fullscreen-container {
@@ -25,6 +27,7 @@
             position: relative;
             overflow: hidden;
             cursor: default; /* Default cursor */
+            touch-action: none; /* Disable browser's default touch actions */
         }
         
         .image-strip {
@@ -51,7 +54,6 @@
             max-height: 100%;
         }
         
-        
         /* Disable text selection */
         .no-select {
             -webkit-user-select: none;
@@ -60,6 +62,83 @@
             user-select: none;
         }
         
+        /* Zoom Controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 8px;
+            z-index: 10;
+        }
+        
+        .zoom-btn {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 4px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .zoom-level {
+            color: white;
+            margin: 0 8px;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        /* Instructions */
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 250px;
+            z-index: 10;
+        }
+        
+        .instructions ul {
+            margin: 5px 0 0 15px;
+            padding: 0;
+        }
+        
+        .instructions li {
+            margin-bottom: 2px;
+        }
+
+        /* Media query for mobile */
+        @media (max-width: 768px) {
+            .instructions {
+                font-size: 12px;
+                max-width: 200px;
+                padding: 8px;
+            }
+            
+            .zoom-controls {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .zoom-btn {
+                width: 26px;
+                height: 26px;
+                font-size: 16px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -169,11 +248,11 @@
         <div class="instructions">
             <strong>Controls:</strong>
             <ul>
+                <li>Drag to move image</li>
+                <li>Pinch to zoom in/out</li>
+                <li>Double tap to reset zoom</li>
                 <li>Mouse wheel to zoom in/out</li>
                 <li>Arrow keys to move image</li>
-                <li>+/- keys to zoom in/out</li>
-                <li>R key to reset zoom</li>
-                <li>ESC to exit fullscreen</li>
             </ul>
         </div>
     </div>
@@ -182,18 +261,30 @@
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('scrollContainer');
             const imageStrip = document.getElementById('imageStrip');
+            const zoomInBtn = document.getElementById('zoomIn');
+            const zoomOutBtn = document.getElementById('zoomOut');
+            const resetZoomBtn = document.getElementById('resetZoom');
+            const zoomLevelDisplay = document.getElementById('zoomLevel');
             
             let currentZoom = 1;
-            const zoomStep = 0.05;
+            const zoomStep = 0.1;
             const minZoom = 0.2;
-            const maxZoom = 28;
+            const maxZoom = 5;
             
             // Position tracking variables
             let translateX = 0;
             let translateY = 0;
             
             // Movement step for keyboard navigation
-            const moveStep = 30; // Slightly larger step for keyboard-only navigation
+            const moveStep = 30;
+            
+            // Touch event tracking
+            let isDragging = false;
+            let lastTouchX = 0;
+            let lastTouchY = 0;
+            let lastDistance = 0;
+            let doubleTapTimer = null;
+            let lastTapTime = 0;
             
             // Center the image strip initially
             function centerImageStrip() {
@@ -207,7 +298,9 @@
                     // Otherwise center it
                     translateX = (containerWidth - stripWidth) / 2;
                 }
+                translateY = 0;
                 updateTransform();
+                updateZoomDisplay();
             }
             
             // Update zoom level and position
@@ -215,15 +308,22 @@
                 imageStrip.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
             }
             
+            // Update zoom level display
+            function updateZoomDisplay() {
+                zoomLevelDisplay.textContent = `${Math.round(currentZoom * 100)}%`;
+            }
+            
             // Change zoom level
-            function changeZoom(delta) {
+            function changeZoom(delta, centerX, centerY) {
                 const newZoom = Math.min(Math.max(currentZoom + delta, minZoom), maxZoom);
                 
                 if (newZoom !== currentZoom) {
-                    // Calculate center of view
-                    const rect = container.getBoundingClientRect();
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
+                    // Use container center if no specific center point provided
+                    if (centerX === undefined || centerY === undefined) {
+                        const rect = container.getBoundingClientRect();
+                        centerX = rect.width / 2;
+                        centerY = rect.height / 2;
+                    }
                     
                     // Calculate new position based on center position
                     const scale = newZoom / currentZoom;
@@ -234,6 +334,7 @@
                     
                     currentZoom = newZoom;
                     updateTransform();
+                    updateZoomDisplay();
                 }
             }
             
@@ -247,29 +348,100 @@
                 const mouseY = e.clientY - rect.top;
                 
                 // Calculate zoom change
-                const delta = -Math.sign(e.deltaY) * 0.1;
-                const newZoom = Math.min(Math.max(currentZoom + delta, minZoom), maxZoom);
+                const delta = -Math.sign(e.deltaY) * zoomStep;
+                changeZoom(delta, mouseX, mouseY);
+            }, { passive: false });
+            
+            // Touch event handlers
+            container.addEventListener('touchstart', function(e) {
+                e.preventDefault();
                 
-                // Only proceed if zoom actually changes
-                if (newZoom !== currentZoom) {
-                    // Calculate new position based on mouse cursor position
-                    const scale = newZoom / currentZoom;
-                    
-                    // Adjust position to zoom toward cursor position
-                    translateX = mouseX - (mouseX - translateX) * scale;
-                    translateY = mouseY - (mouseY - translateY) * scale;
-                    
-                    currentZoom = newZoom;
-                    updateTransform();
+                const touches = e.touches;
+                
+                // Check for double tap
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTapTime;
+                
+                if (tapLength < 300 && tapLength > 0 && touches.length === 1) {
+                    // Double tap detected - reset zoom
+                    currentZoom = 1;
+                    centerImageStrip();
+                    lastTapTime = 0; // Reset tap timer
+                } else {
+                    lastTapTime = currentTime;
+                }
+                
+                if (touches.length === 1) {
+                    // Single touch - start drag
+                    isDragging = true;
+                    lastTouchX = touches[0].clientX;
+                    lastTouchY = touches[0].clientY;
+                } else if (touches.length === 2) {
+                    // Pinch gesture - start zoom
+                    lastDistance = getDistance(
+                        touches[0].clientX, touches[0].clientY,
+                        touches[1].clientX, touches[1].clientY
+                    );
                 }
             }, { passive: false });
             
-            // Mouse events - disabled dragging functionality
-            // Just prevent default behavior on mousedown to avoid selection
-            container.addEventListener('mousedown', function(e) {
+            container.addEventListener('touchmove', function(e) {
                 e.preventDefault();
-            });
+                
+                const touches = e.touches;
+                
+                if (isDragging && touches.length === 1) {
+                    // Handle drag
+                    const touchX = touches[0].clientX;
+                    const touchY = touches[0].clientY;
+                    
+                    const deltaX = touchX - lastTouchX;
+                    const deltaY = touchY - lastTouchY;
+                    
+                    translateX += deltaX;
+                    translateY += deltaY;
+                    
+                    lastTouchX = touchX;
+                    lastTouchY = touchY;
+                    
+                    updateTransform();
+                } else if (touches.length === 2) {
+                    // Handle pinch zoom
+                    const currentDistance = getDistance(
+                        touches[0].clientX, touches[0].clientY,
+                        touches[1].clientX, touches[1].clientY
+                    );
+                    
+                    if (lastDistance > 0) {
+                        // Calculate the midpoint between the two touches
+                        const midX = (touches[0].clientX + touches[1].clientX) / 2;
+                        const midY = (touches[0].clientY + touches[1].clientY) / 2;
+                        
+                        // Get position relative to container
+                        const rect = container.getBoundingClientRect();
+                        const centerX = midX - rect.left;
+                        const centerY = midY - rect.top;
+                        
+                        // Calculate zoom factor
+                        const zoomFactor = (currentDistance / lastDistance) - 1;
+                        changeZoom(zoomFactor * 0.5, centerX, centerY);
+                    }
+                    
+                    lastDistance = currentDistance;
+                }
+            }, { passive: false });
             
+            container.addEventListener('touchend', function(e) {
+                isDragging = false;
+                if (e.touches.length === 0) {
+                    lastDistance = 0;
+                }
+            }, { passive: false });
+            
+            // Calculate distance between two points (for pinch zoom)
+            function getDistance(x1, y1, x2, y2) {
+                return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            }
             
             // Keyboard navigation
             document.addEventListener('keydown', function(e) {
@@ -322,6 +494,25 @@
                 }
             });
             
+            // Zoom button handlers
+            zoomInBtn.addEventListener('click', function() {
+                changeZoom(zoomStep);
+            });
+            
+            zoomOutBtn.addEventListener('click', function() {
+                changeZoom(-zoomStep);
+            });
+            
+            resetZoomBtn.addEventListener('click', function() {
+                currentZoom = 1;
+                centerImageStrip();
+            });
+            
+            // Prevent context menu on right-click
+            container.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
+            
             // Initialize
             window.addEventListener('load', function() {
                 // Short delay to ensure images are loaded and sizes are calculated
@@ -332,11 +523,6 @@
             
             // Handle window resize
             window.addEventListener('resize', centerImageStrip);
-            
-            // Prevent context menu on right-click
-            container.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-            });
             
             // Force focus on the container to ensure keyboard events work
             container.tabIndex = 0;
