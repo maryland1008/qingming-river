@@ -246,13 +246,10 @@
         
         <!-- Instructions -->
         <div class="instructions">
-            <strong>Controls:</strong>
             <ul>
-                <li>Drag to move image</li>
-                <li>Pinch to zoom in/out</li>
-                <li>Double tap to reset zoom</li>
-                <li>Mouse wheel to zoom in/out</li>
-                <li>Arrow keys to move image</li>
+<li>双击居中图片</li>
+<li>鼠标滚轮缩放</li>
+<li>方向键移动图片</li>
             </ul>
         </div>
     </div>
@@ -269,7 +266,7 @@
             let currentZoom = 1;
             const zoomStep = 0.1;
             const minZoom = 0.2;
-            const maxZoom = 5;
+            const maxZoom = 20;
             
             // Position tracking variables
             let translateX = 0;
@@ -362,9 +359,8 @@
                 const currentTime = new Date().getTime();
                 const tapLength = currentTime - lastTapTime;
                 
-                if (tapLength < 300 && tapLength > 0 && touches.length === 1) {
+                if (tapLength < 100 && tapLength > 0 && touches.length === 1) {
                     // Double tap detected - reset zoom
-                    currentZoom = 1;
                     centerImageStrip();
                     lastTapTime = 0; // Reset tap timer
                 } else {
@@ -478,12 +474,6 @@
                         break;
                     case '-':
                         changeZoom(-zoomStep);
-                        e.preventDefault();
-                        break;
-                    case 'r':
-                    case 'R':
-                        currentZoom = 1;
-                        centerImageStrip();
                         e.preventDefault();
                         break;
                     case 'Escape':
