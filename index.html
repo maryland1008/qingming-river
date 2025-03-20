@@ -318,16 +318,18 @@
                     // Use container center if no specific center point provided
                     if (centerX === undefined || centerY === undefined) {
                         const rect = container.getBoundingClientRect();
-                        centerX = rect.width / 2;
-                        centerY = rect.height / 2;
+                        centerX = 0;
+                        centerY = 0;
                     }
                     
                     // Calculate new position based on center position
                     const scale = newZoom / currentZoom;
                     
                     // Adjust position to zoom toward center
-                    translateX = centerX - (centerX - translateX) * scale;
-                    translateY = centerY - (centerY - translateY) * scale;
+                    // translateX = centerX - (centerX - translateX) * scale;
+                    // translateY = centerY - (centerY - translateY) * scale;
+                    translateX = centerX - (centerX - translateX) * (scale + 1.0) / 2;
+                    translateY = 0;
                     
                     currentZoom = newZoom;
                     updateTransform();
