@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清明上河图</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        .fullscreen-container {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            background-color: #1a1a1a;
+        }
+        
+        .scroll-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            cursor: default; /* Default cursor */
+        }
+        
+        .image-strip {
+            display: flex;
+            flex-direction: row-reverse;
+            flex-wrap: nowrap;
+            width: max-content;
+            height: 100%;
+            transform-origin: center;
+            position: relative;
+        }
+        
+        .image-item {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+        
+        .image-item img {
+            height: auto;
+            width: auto;
+            max-height: 100%;
+        }
+        
+        
+        /* Disable text selection */
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="fullscreen-container">
+        <div class="scroll-container no-select" id="scrollContainer">
+            <div class="image-strip" id="imageStrip">
+                <!-- Images with original size -->
+                <div class="image-item">
+                    <img src="images/01.png" alt="Image 01">
+                </div>
+                <div class="image-item">
+                    <img src="images/02.png" alt="Image 02">
+                </div>
+                <div class="image-item">
+                    <img src="images/03.png" alt="Image 03">
+                </div>
+                <div class="image-item">
+                    <img src="images/04.png" alt="Image 04">
+                </div>
+                <div class="image-item">
+                    <img src="images/05.png" alt="Image 05">
+                </div>
+                <div class="image-item">
+                    <img src="images/06.png" alt="Image 06">
+                </div>
+                <div class="image-item">
+                    <img src="images/07.png" alt="Image 07">
+                </div>
+                <div class="image-item">
+                    <img src="images/08.png" alt="Image 08">
+                </div>
+                <div class="image-item">
+                    <img src="images/09.png" alt="Image 09">
+                </div>
+                <div class="image-item">
+                    <img src="images/10.png" alt="Image 10">
+                </div>
+                <div class="image-item">
+                    <img src="images/11.png" alt="Image 11">
+                </div>
+                <div class="image-item">
+                    <img src="images/12.png" alt="Image 12">
+                </div>
+                <div class="image-item">
+                    <img src="images/13.png" alt="Image 13">
+                </div>
+                <div class="image-item">
+                    <img src="images/14.png" alt="Image 14">
+                </div>
+                <div class="image-item">
+                    <img src="images/15.png" alt="Image 15">
+                </div>
+                <div class="image-item">
+                    <img src="images/16.png" alt="Image 16">
+                </div>
+                <div class="image-item">
+                    <img src="images/17.png" alt="Image 17">
+                </div>
+                <div class="image-item">
+                    <img src="images/18.png" alt="Image 18">
+                </div>
+                <div class="image-item">
+                    <img src="images/19.png" alt="Image 19">
+                </div>
+                <div class="image-item">
+                    <img src="images/20.png" alt="Image 20">
+                </div>
+                <div class="image-item">
+                    <img src="images/21.png" alt="Image 21">
+                </div>
+                <div class="image-item">
+                    <img src="images/22.png" alt="Image 22">
+                </div>
+                <div class="image-item">
+                    <img src="images/23.png" alt="Image 23">
+                </div>
+                <div class="image-item">
+                    <img src="images/24.png" alt="Image 24">
+                </div>
+                <div class="image-item">
+                    <img src="images/25.png" alt="Image 25">
+                </div>
+                <div class="image-item">
+                    <img src="images/26.png" alt="Image 26">
+                </div>
+                <div class="image-item">
+                    <img src="images/27.png" alt="Image 27">
+                </div>
+                <div class="image-item">
+                    <img src="images/28.png" alt="Image 28">
+                </div>
+                <div class="image-item">
+                    <img src="images/29.png" alt="Image 29">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Zoom Controls -->
+        <div class="zoom-controls">
+            <div class="zoom-btn" id="zoomOut">−</div>
+            <div class="zoom-level" id="zoomLevel">100%</div>
+            <div class="zoom-btn" id="zoomIn">+</div>
+            <div class="zoom-btn ml-2" id="resetZoom">↺</div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="instructions">
+            <strong>Controls:</strong>
+            <ul>
+                <li>Mouse wheel to zoom in/out</li>
+                <li>Arrow keys to move image</li>
+                <li>+/- keys to zoom in/out</li>
+                <li>R key to reset zoom</li>
+                <li>ESC to exit fullscreen</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('scrollContainer');
+            const imageStrip = document.getElementById('imageStrip');
+            
+            let currentZoom = 1;
+            const zoomStep = 0.05;
+            const minZoom = 0.2;
+            const maxZoom = 28;
+            
+            // Position tracking variables
+            let translateX = 0;
+            let translateY = 0;
+            
+            // Movement step for keyboard navigation
+            const moveStep = 30; // Slightly larger step for keyboard-only navigation
+            
+            // Center the image strip initially
+            function centerImageStrip() {
+                const containerWidth = container.clientWidth;
+                const stripWidth = imageStrip.clientWidth * currentZoom;
+                
+                if (stripWidth > containerWidth) {
+                    // If the strip is wider than the container, position it to show the rightmost part
+                    translateX = -(stripWidth - containerWidth);
+                } else {
+                    // Otherwise center it
+                    translateX = (containerWidth - stripWidth) / 2;
+                }
+                updateTransform();
+            }
+            
+            // Update zoom level and position
+            function updateTransform() {
+                imageStrip.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+            }
+            
+            // Change zoom level
+            function changeZoom(delta) {
+                const newZoom = Math.min(Math.max(currentZoom + delta, minZoom), maxZoom);
+                
+                if (newZoom !== currentZoom) {
+                    // Calculate center of view
+                    const rect = container.getBoundingClientRect();
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    // Calculate new position based on center position
+                    const scale = newZoom / currentZoom;
+                    
+                    // Adjust position to zoom toward center
+                    translateX = centerX - (centerX - translateX) * scale;
+                    translateY = centerY - (centerY - translateY) * scale;
+                    
+                    currentZoom = newZoom;
+                    updateTransform();
+                }
+            }
+            
+            // Mouse wheel zoom
+            container.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                
+                // Get mouse position relative to container
+                const rect = container.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Calculate zoom change
+                const delta = -Math.sign(e.deltaY) * 0.1;
+                const newZoom = Math.min(Math.max(currentZoom + delta, minZoom), maxZoom);
+                
+                // Only proceed if zoom actually changes
+                if (newZoom !== currentZoom) {
+                    // Calculate new position based on mouse cursor position
+                    const scale = newZoom / currentZoom;
+                    
+                    // Adjust position to zoom toward cursor position
+                    translateX = mouseX - (mouseX - translateX) * scale;
+                    translateY = mouseY - (mouseY - translateY) * scale;
+                    
+                    currentZoom = newZoom;
+                    updateTransform();
+                }
+            }, { passive: false });
+            
+            // Mouse events - disabled dragging functionality
+            // Just prevent default behavior on mousedown to avoid selection
+            container.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+            });
+            
+            
+            // Keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                // Only respond to keyboard if not in any input field
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+                
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        translateX += moveStep;
+                        updateTransform();
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                        translateX -= moveStep;
+                        updateTransform();
+                        e.preventDefault();
+                        break;
+                    case 'ArrowUp':
+                        translateY += moveStep;
+                        updateTransform();
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                        translateY -= moveStep;
+                        updateTransform();
+                        e.preventDefault();
+                        break;
+                    case '+':
+                    case '=': // For keyboards where = is + without shift
+                        changeZoom(zoomStep);
+                        e.preventDefault();
+                        break;
+                    case '-':
+                        changeZoom(-zoomStep);
+                        e.preventDefault();
+                        break;
+                    case 'r':
+                    case 'R':
+                        currentZoom = 1;
+                        centerImageStrip();
+                        e.preventDefault();
+                        break;
+                    case 'Escape':
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        }
+                        break;
+                }
+            });
+            
+            // Initialize
+            window.addEventListener('load', function() {
+                // Short delay to ensure images are loaded and sizes are calculated
+                setTimeout(centerImageStrip, 100);
+                // Set focus to container to ensure keyboard events work
+                container.focus();
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', centerImageStrip);
+            
+            // Prevent context menu on right-click
+            container.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
+            
+            // Force focus on the container to ensure keyboard events work
+            container.tabIndex = 0;
+            container.focus();
+        });
+    </script>
+</body>
+</html>
